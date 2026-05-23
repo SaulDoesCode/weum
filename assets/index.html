@@ -1,0 +1,370 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="shortcut icon" href="/svg/icon.svg" type="image/svg">
+<title>(0-0)</title>
+<script src="js/api.js"></script>
+<style>* { position: relative; box-sizing: border-box; } body { margin: 0; padding: 0; background-color: #2e2820; color: #e1bc99;}
+.mnu, main, .states {
+    display: flex;
+    justify-content: space-evenly;
+    justify-items: center;
+    align-content: center;
+    align-items: center;
+    flex-flow: row wrap;
+}
+main { 
+    min-height: calc(100vh - 8mm);
+    padding: 2mm;
+    h1 {width: 100%; text-align: center;}
+    article {
+        margin: .5em;
+        max-width: 97vw;
+    }
+}
+.mnu {
+    color: #fff;
+    background-color: rgb(170, 151, 115);
+    padding: .25em .5em;
+    height: 8mm;
+    margin: 0;
+    text-align: center;
+    a, input, button { margin: .1em .25em; }
+    a { text-decoration: none; }
+    a:visited, a:focus {
+        color: #fff;
+        text-decoration: overline !important;
+    }
+    a:hover, a:active {
+        text-decoration: overline;
+        color: #ebc99c;
+        text-shadow: 0 1px 3px rgb(130, 121, 125, .5);
+    }
+    button {
+        border: none;
+        padding: .25em .5em;
+        color: #fff;
+        background-color: #e1bc99;
+        border: 1px solid transparent;
+        cursor: crosshair;
+    }
+    button:hover {
+        border: 1px solid #fff;
+    }
+    button:active {
+        box-shadow: inset 0 0 .25em rgb(130, 121, 125, .5);
+        cursor: pointer;
+    }
+    .states {
+        display: inline-flex;
+        user-select: none;
+        span {
+            font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
+            font-weight: bold;
+            color: #000;
+        }
+        .active {
+            color: #fff;
+        }
+    }
+}
+section.btns {
+    button {
+        border: 1px solid transparent;
+        border-radius: 0;
+        background-color: #e1bc99;
+        margin: .25em;
+        transition: all 120ms ease;
+    }
+    button:hover {
+        border: 1px solid #fff;
+        color: #2e2820;
+        background-color: #ecad73;
+        text-shadow: 0 0 3px rgb(170, 151, 115,.2);
+    }
+}
+@media screen and (max-width: 460px) {
+    main {
+        height: fit-content;
+        min-height: 100vh;
+    }
+    .mnu {
+        height: fit-content;
+    }
+}
+</style></head><body><script>const plt = {}, routes = {}, bools = {G(t) {
+    if (t) try { bools.E.sensitivityDial.remove() } catch(e) {}
+}, R() {}, E(t) {
+    if (!bools.E.sensitivityDial) bools.E.sensitivityDial = input.sensitivity.attr({
+        type: 'range', 
+        min: '0', max: '1', step:'0.001',
+        value: '0.66',
+        title: 'sensitivity dial'
+    })['$.states']()
+    else {
+        t ? mnu.querySelector('.states').append(bools.E.sensitivityDial) : bools.E.sensitivityDial.remove()
+    }
+}, s() {}, c() {}}, 
+    enbooled =l => !!plt.states.filter(s => s.classList.contains('active') && s.textContent == l).length,
+    nonRep = {}, callunrept = (n, fn) => {
+        if (nonRep.last == n) return
+        mn.innerHTML = ''
+        location.hash = nonRep.last = n
+        return fn()
+    },
+    hlink = (n, fn) => (routes[n] = () => callunrept(n, fn), d.a.onclick(_=> routes[n]())).attr({href: '#'+(n = n.trim())})(n),
+    kopl = o => {
+        let l = [], n
+        for (n in o) l.push(hlink(n, o[n]))
+        return section.links(l)
+    }, mn = main.$body(),
+    mnu = div.mnu.$body(d.a.attr({href: 'memory#wm'})('memory'),
+        kopl({
+            lists() { console.log('lists') },
+            write() { writr() },
+            billboardText() {
+                Style.txt`position: absolute; font-size: 20px; top: 1cm; left: 16cm;`
+                const txt = "Saul van der Walt"
+                const el = div.txt.at(mn)(txt)
+                el.$fz = 20
+                el.$hoz = 0
+                el.$going = {
+                    w() {
+                        el.style.fontSize = (el.$fz += 0.03) + 'px'
+                    },
+                    a() {
+                        el.style.transform = `translateX(${el.$hoz+=0.03}px)`
+                    },
+                    s() {
+                        el.style.fontSize = (el.$fz -= 0.03) + 'px'
+                    },
+                    d() {
+                        el.style.transform = `translateX(${el.$hoz-=0.03}px)`
+                    }
+                }
+                window.onkeydown = e => {
+                    //console.log(e)
+                    const change = el.$going[e.key]
+                    if (change) {
+                        let going = true
+                        const go = () => {
+                            change()
+                            if (going) requestAnimationFrame(go)
+                        }, hit = ue => {
+                            if (e.key == ue.key) {
+                                going = false
+                                window.removeEventListener('keyup', hit)
+                            }
+                        }
+                        window.addEventListener('keyup', hit)
+                        requestAnimationFrame(go)
+                    }
+                }
+
+                window.onmousemove = e => {
+                    //console.log(e)
+                }
+            },
+            nbn() {
+                function populateSums() {
+                    {
+                        const [a, b, c, d] = [
+                            Number(rowA[0].value) + Number(rowB[0].value) + Number(rowC[0].value),
+                            Number(rowA[1].value) + Number(rowB[1].value) + Number(rowC[1].value),
+                            Number(rowA[2].value) + Number(rowB[2].value) + Number(rowC[2].value),
+                        ]
+                        vsum.textContent = `${a} + ${b} + ${c} = ${a+b+c}`
+                    }{ const [a, b, c] = [
+                            Number(rowA[0].value) + Number(rowA[1].value) + Number(rowA[2].value),
+                            Number(rowB[0].value) + Number(rowB[1].value) + Number(rowB[2].value),
+                            Number(rowC[0].value) + Number(rowC[1].value) + Number(rowC[2].value)
+                        ]
+                        hsum.textContent = `${a} + ${b} + ${c} = ${a+b+c}`
+                    }{
+                        const [a, b, c, d, e] = [
+                            Number(rowA[0].value),
+                            Number(rowB[0].value) + Number(rowA[1].value),
+                            Number(rowC[0].value) + Number(rowB[1].value) + Number(rowA[2].value),
+                            Number(rowC[1].value) + Number(rowB[2].value),
+                            Number(rowC[2].value)
+                        ]
+                        dupsum.textContent = `${a} + ${b} + ${c} + ${d} + ${e} = ${a+b+c+d+e}`
+                    }{
+                        const [a, b, c, d, e] = [
+                            Number(rowC[0].value),
+                            Number(rowC[1].value) + Number(rowB[0].value),
+                            Number(rowC[2].value) + Number(rowB[1].value) + Number(rowA[0].value),
+                            Number(rowB[2].value) + Number(rowA[1].value),
+                            Number(rowA[2].value),
+                        ]
+                        ddownsum.textContent = `${a} + ${b} + ${c} + ${d} + ${e} = ${a+b+c+d+e}`
+                    }
+                }
+                const [vsum, hsum, dupsum, ddownsum] = [p.vsum(), p.hsum(), p.dupsum(), p.ddownsum()],
+                inpt = value => input.attr({type: 'number', value}).onchange(populateSums)(),
+                rowA = [1, 2, 3].map(inpt), 
+                rowB = [4, 5, 6].map(inpt),
+                rowC = [7, 8, 9].map(inpt), grid = div.grid(div(rowA), div(rowB), div(rowC))
+                populateSums()
+                mn.append(grid, d.style(`div.grid {
+                    color: #c9ab99;
+                    div {
+                        input { width: 2cm; height: 2cm; }
+                        background: #fff;
+                        color: #fff;
+                    }
+                }`), d.br(), section.sums(vsum, hsum, dupsum, ddownsum))
+            }
+        }),
+        section.term(
+            plt.txt = input.s.attr({type: 'text'}).onkeydown(e => {
+                if (e.key == 'Enter') behit()
+            }).onauxclick(e => {
+                e.preventDefault()
+                console.log('fnni-kliek')
+                new Audio('/waves/lilooh.wav').play()
+            })(),
+            plt.txtbtn = button.onclick(e => behit())('hit'),
+            div.states(plt.states = Object.keys(bools).map(n => span.onclick((e, s) => {
+                s.classList.toggle('active')
+                const state = s.classList.contains('active'),
+                    E = plt.states.filter(s => s.textContent == 'E')[0],
+                    G = plt.states.filter(s => s.textContent == 'G')[0],
+                    R = plt.states.filter(s => s.textContent == 'R')[0]
+                bools[n](s.classList.contains('active'))
+                if (e.target == G) {
+                    E.classList.toggle('active', 0)
+                    R.style.display = ''
+                } else if (e.target == E) {
+                    if (state) {
+                        G.classList.toggle('active', 0)
+                        R.style.display = 'none'
+                    } else R.style.display = ''
+                }
+            })(n)))
+        )
+    ), gsat = async v => article.at(mn).attr({title: [...(await memory.search(v, 1))]})(span(v)),
+    resultate = async data => {
+        if (data instanceof Promise) data = await data
+        location.hash = 'genuflect'
+        location.hash = ''
+        mn.innerHTML = ''
+        mn.removeAttribute('style')
+        h1.at(mn)(enbooled('G') ? ''+resultate.sum : 'results')
+        data.forEach((v, k) => article.at(mn).attr({title: [...k]})(span(v)))
+    }, behit = async () => {
+        let v = plt.txt.value.trim()
+        const s = enbooled('s'), G = enbooled('G'), E = enbooled('E')
+        try { await resultate(memory[E ? 'esearch' : G ? 'gsearch' : 'search'](
+            G ? resultate.sum = gsum(v) : v, 
+            G ? (s && gsat(v), enbooled('R') ? 1 : undefined) : E ? bools.E.sensitivityDial.value || 0.69 : s ? 1 : undefined,
+            E ? s ? 1 : undefined : undefined
+        )); if (enbooled('c')) plt.txt.value = '' } catch(e) { console.error(e) }
+    }
+
+    let lines = [], capture = () => lines.map(ln => ln.value.trim()).join('\n'),
+    writrSave = async () => {
+        writr.saturatedAs = await memory.saturate(capture(), writr.saturatedAs)
+        btns[0].textContent = 'edit'
+        btns[1].after(btns[2])
+    }, btns = [
+        button.selectAll.onclick(writrSave)('save'),
+        button.clear.onclick((e, c)=> c.clear())('clear'),
+        button.clearId.onclick((e, c) => c.clearId())('own'),
+        button.saveThenClear.onclick(async _=> {
+            await writrSave()
+            btns[1].clear()
+        })('save then clear')
+    ], writr = async (at = mn) => {
+        d.style.at(mn)(`main {
+            flex-flow: column nowrap;
+            justify-content: center;
+            align-content: center;
+            align-items: center;
+            input[type="text"] { width: 16cm; margin: 0; border: none; outline: none; border-bottom: 1px solid #fff; }
+            input[type="text"]:hover, input[type="text"]:active { border-bottom: 1px solid #ccc; }
+        }`)
+        console.log("huam awaits nam")
+        const one = (value = '', after) => input.attr({type: 'text', value})._(i => {
+            i.onkeyup = async e => { 
+                if (e.key == 'Enter') {
+                    if (e.ctrlKey) await writrSave()
+                    else {
+                        const curpos = i.selectionStart, txt = i.value, 
+                        txtBefore = txt.substring(0, curpos), txtAfter = txt.substring(curpos)
+                        i.value = txtBefore
+                        more(one(txtAfter, i))
+                    }
+                } else if (e.key == 'Backspace' && i.selectionStart == 0) {
+                    const l = lines[lines.indexOf(i) - 1]
+                    if (l) {
+                        l.value += ' ' + i.value.trim()
+                        rmLine()
+                        l.focus()
+                        l.setSelectionRange(l.value.length, l.value.length)
+                    }
+                } else if (e.key == 'Delete') {
+                    if (e.ctrlKey) clear()
+                    else if (e.shiftKey) {
+                        if (writr.saturatedAs) await memory.forget(writr.saturatedAs)
+                    }
+                } else {
+                    const index = lines.indexOf(i)
+                    let target, pos = i.selectionStart
+
+                    if (e.key === 'ArrowUp') {
+                        e.preventDefault()
+                        target = lines[index - 1] || lines[lines.length - 1]
+                        target.focus()
+                        target.setSelectionRange(pos, pos)
+                    } else if (e.key === 'ArrowDown') {
+                        e.preventDefault()
+                        target = lines[index + 1] || lines[0]
+                        target.focus()
+                        target.setSelectionRange(pos, pos)
+                    } else if (e.key === 'ArrowLeft' && pos === 0) {
+                        e.preventDefault()
+                        if (index === 0) {
+                            target = lines[lines.length - 1]
+                            target.focus()
+                            setTimeout(() => target.setSelectionRange(target.value.length, target.value.length), 120)
+                        } else if (index === lines.length - 1) {
+                            target = lines[lines.length - 2] || lines[0]
+                            target.focus()
+                            setTimeout(() => target.setSelectionRange(target.value.length, target.value.length), 120)
+                        } else {
+                            target = lines[index - 1]
+                            target.focus()
+                            setTimeout(() => target.setSelectionRange(target.value.length, target.value.length), 120)
+                        }
+                    } else if (e.key === 'ArrowRight' && pos === i.value.length) {
+                        e.preventDefault()
+                        target = lines[index + 1] || lines[0]
+                        target.focus()
+                        setTimeout(() => target.setSelectionRange(0, 0), 120)
+                    }
+                }
+            }
+            const rmLine = i.onauxclick = e => { 
+                i.value = '';
+                i.remove();
+                lines = lines.filter(ln => ln != i);
+                lines[lines.length - 1].focus()
+            }
+            after ? after.after(i) : mn.append(i)
+            i.focus()
+            document.querySelector('main > input[type="text"]:last-of-type').after(section.btns(btns))
+        })(), more = (ln = one()) => lines = mn.children.length ? [...mn.children].filter(c => c.tagName == 'INPUT') : [...lines, ln], 
+        clear = btns[1].clear = () => {
+            lines.forEach(ln => ln.remove())
+            lines = []
+            more()
+            own()
+        }, own = btns[2].clearId = () => {
+            delete writr.saturatedAs
+            btns[0].textContent = 'save'
+            btns[2].remove()
+        }
+        lines.length ? at.append(...lines, section.btns(btns)) : more()
+        btns[2].remove()
+        return { capture, one, get lines() { return lines }, set at(n) { at = n } }
+    };(window.onhashchange=_=>{try{routes[location.hash.slice(1)]()}catch(e){}})()
+</script><script src="js/sign.js"></script></body></html>

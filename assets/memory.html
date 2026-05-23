@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Memory</title>
+        <link rel="shortcut icon" href="/svg/icon.svg" type="image/svg">
+        <style>
+            body {
+                display: flex;
+                min-height: 100vh;
+                min-width: 100vw;
+                max-width: 100vw;
+                margin: 0;
+                border: none;
+                justify-content: center;
+                justify-items: center;
+                align-content: center;
+                justify-content: center;
+                overflow-x: hidden;
+                text-align: center;
+                flex-flow: column nowrap;
+                font-family: "Times New Roman", Times, serif;
+                background-color: #000;
+            }
+
+            input.term {
+                position: absolute;
+                bottom: 1mm;
+                display: inline-block;
+                margin: 0.25em auto;
+                height: 8mm;
+                width: 15.5cm;
+                margin: auto calc(50% - (15.5cm / 2));
+                font-size: 18px;
+                font-family: "Times New Roman", Times, serif;
+                border-radius: none;
+                outline: none;
+                border: none;
+                border-bottom: 1px solid #fff;
+                color: #fff;
+                background-color: #000;
+                :active {
+                    border-top: 1px solid #000;
+                }
+            }
+
+            .sidecar {
+                position: absolute;
+                right: 1cm;
+                bottom: 1cm;
+                color: #fff;
+            }
+            .sidecar::before { content: "("; }
+            .sidecar::after { content: ")"; }
+            .sidecar > *:not(:first-of-type)::before { content: ', '; }
+
+            .checkers {
+                border-top: 1px solid #101;
+                opacity: 0;
+                transition: all 111ms ease;
+            }
+            .checkers:hover, .checkers:active {
+                opacity: 1;
+            }
+
+            main.mn {
+                color: #fff;
+                /* background-color: #86624d; */
+                background-color: #c9ab99;
+                justify-content: center;
+                justify-items: center;
+                align-content: center;
+                justify-content: center;
+                text-align: center;
+                flex-flow: row wrap;
+                font-size: 1.29em;
+                padding: .24em;
+                max-height: 75vh;
+                max-width: 97vw;        
+                margin: .5em calc(1.5vw);
+                overflow: visible;
+                overflow-y: auto;
+                article {
+                    display: inline-block;
+                    padding: .2em .35em;
+                    margin: .51px;
+                    background-color: #282626;
+                    transition: all 12ms ease;
+                    span {
+                        margin: .5em;
+                        font-size: 0.9em;
+                    }
+                    p {
+                        margin: 0;
+                    }
+                }
+                article:hover {
+                    background-color: #fff;
+                    color: #282626;
+                    transform: scale(1.2);
+                }
+                article:first-of-type {
+                    margin-top: 0;
+                }
+                article:last-of-type {
+                    margin-bottom: 0;
+                }
+                .pf {
+                    font-size: .5em;
+                    color: rgb(229, 229, 229);
+                }
+                .pf:hover {
+                    color: rgb(200, 199, 200);
+                }
+                .pf::before {
+                    content: "(";
+                }
+                .pf::after {
+                    content: ")";
+                }
+            }
+
+            .sensitivity {
+                position: absolute;
+                left: -1.5cm;
+                bottom: 1.5cm;
+                height: 2cm;
+                opacity: 0;
+                transform: rotateZ(-90deg);
+                transition: all 120ms ease;
+            }
+            .sensitivity:hover { opacity: 1; transform: scale(1.1) rotateZ(-90deg); }
+
+            .pge {
+                color: #fff;
+                outline: none;
+                font-family: "Times New Roman", Times, serif;
+            }
+
+            .toast {
+                display: inline-block;
+                margin: .25em;
+                color: #fff;
+            }
+            @media print {
+
+            }
+        </style>
+        <script src="js/api.js"></script>
+    </head>
+    <body>
+        <script src="js/sign.js"></script>
+        <script src="js/memory.js"></script>
+    </body>
+</html>

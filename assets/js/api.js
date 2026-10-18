@@ -312,6 +312,7 @@ notereq = (a, b) => {
   list: (ln, t) => fetchBinaryData(ln, t, "list"),
   unlist: ln => deserializeListOfLists(postBytes('unlist', ln)),
   get backup() { return new Promise(async ok => ok(await (await fetch('memory/backup')).text())) },
+  get ackup() { return new Promise(async ok => ok(await (await fetch('memory/backup?a')).text())) },
   get count() { return new Promise(ok => fetch('/memory/count').then(r => r.json()).then(c => ok(c))) }
 }, { get: (o, k) => k in o ? o[k] : o.remember(k) }),
 gprice = {
@@ -338,7 +339,8 @@ gsum = (txt, r, sum = 0) => {
       vrice += vrices[c] || 0
       crise += crises[c] || 0
     }
-    return w3 ? [sum, r] : `(${sum} + ${r} = ${sum + r}; diff ${sum - r}, ${(sum+r)+Math.abs(sum - r)} ${(sum+r)+(sum - r)} ${((sum+r)+Math.abs(sum - r)) - ((sum+r)+(sum - r))}) v ${vrice} c ${crise} w ${txt.trim().split(/\s+/).length}`
+    return w3 ? [sum, r] : 
+`(${sum} + ${r} = ${sum + r}; * ${sum * r}; *sqrt(${Math.sqrt(sum * r).toFixed(3)}); diff ${sum - r}, ${(sum+r)+Math.abs(sum - r)} ${(sum+r)+(sum - r)} ${((sum+r)+Math.abs(sum - r)) - ((sum+r)+(sum - r))}) v ${vrice} c ${crise} w ${txt.trim().split(/\s+/).length}`
   }
   for (const c of txt) sum += gprice[c.toLowerCase()] || 0
   return sum
@@ -346,12 +348,12 @@ gsum = (txt, r, sum = 0) => {
   async in(email, password) {
     const res = await pstjsn('/signin', [email, password], 'text')
     if (res == 'signed in') localStorage.setItem('signedin', 1)
-    return res;
+    return res
   },
   async up(moniker, email, password) {
     const res = await pstjsn('/signup', [moniker, email, password], 'text')
     if (res == 'signed up') localStorage.setItem('signedin', 1)
-    return res;
+    return res
   },
   async out() {
     localStorage.removeItem('signedin')
@@ -364,4 +366,11 @@ products = { insert: (name, stock, kind, description, price, imgs = [], tags = [
 }, wordAt = (i, txt) => txt.trim().split(/\s+/)[i], bi2u8s = bi => {
   if ((bi = `${bi}`).length % 2 !== 0) bi = '0' + bi
   const len = bi.length / 2, u8s = new Uint8Array(len)
-  for (let i = 0; i < len; i++) u8s[i] = parseInt(bi.slice(i * 2, i * 2 + 2), 16);return u8s}
+  for (let i = 0; i < len; i++) u8s[i] = parseInt(bi.slice(i * 2, i * 2 + 2), 16);return u8s},
+solveRatio = (x, y, a, b) => {
+  if (x === null || x === undefined) x = (b * y) / a
+  else if (y === null || y === undefined) y = (a * x) / b
+  else if (a === null || a === undefined) a = (b * y) / x
+  else if (b === null || b === undefined) b = (a * x) / y
+  return [a * x, a / b]
+}

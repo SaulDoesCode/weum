@@ -5,18 +5,18 @@ edition = "2024"
 
 [dependencies]
 anyhow = "*"
-salvo = {version = "0.92.0", features = ["serve-static", "anyhow", "rustls", "websocket", "force-https", "compression"]}
+salvo = {version = "1.0.1", features = ["serve-static", "anyhow", "rustls", "websocket", "force-https", "compression"]}
 serde = {version = "*", features = ["derive"]}
 serde_json = "*"
 tokio = { version = "*", features = ["macros", "rt-multi-thread"] }
 tracing = "*"
 tracing-subscriber = "*"
 notify-debouncer-full = "*"
-zstd = { version = "*", features = ["zstdmt"] }
+# zstd = { version = "*", features = ["zstdmt"] }
 rand = { version = "*" }
 rust_decimal = { version = "*", features = ["serde-float", "macros"] }
 sthash = { git = "https://github.com/jedisct1/rust-sthash" }
-redb = { version = "^4.1" }
+redb = { version = "4.4.0" }
 # moka = { version = "0.12.15", features = ["future"] }
 futures-util = "*"
 rayon = { version = "*"}

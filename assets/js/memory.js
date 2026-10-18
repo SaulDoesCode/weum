@@ -83,7 +83,9 @@ const mn = main.mn.$body(), sidecar = div.sidecar(), tryfulSearchVariations = (q
 articulate = (k, v) => article.attr({title: `${k} ${gsum(v,1)}`}).ondblclick(_=>term.value = k).oncontextmenu(async e => {
   if (!e.ctrlKey) return
   e.preventDefault()
-  console.log(await memory.saturate(await memory.forget(JSON.parse('['+k+']'))), e)
+  //console.log(await memory.saturate(await memory.forget(JSON.parse('['+k+']'))), e)
+  const [sm,rsm] = gsum(v,3)
+  envale(Math.floor(Math.sqrt(sm * rsm)), rtb.checked ? 1 : 0)
 }).onclick(e => {
   e.preventDefault()
   if (e.ctrlKey) {
@@ -98,15 +100,26 @@ articulate = (k, v) => article.attr({title: `${k} ${gsum(v,1)}`}).ondblclick(_=>
     style: `max-width: 4.20cm; max-height: 4.20cm;`
   })() : p(v)
 ),
-dispense = async a => (await a).forEach((v, k) => articulate(k, v)), checkers = div.checkers(),
-chkbx = (title, checked) => input._(c => c.checked = checked).at(checkers).attr({type: 'checkbox', title}),
+dispense = async a => ((await a).forEach((v, k) => articulate(k, v)), baroeskwidjel()),
+checkers = div.checkers(), chkbx = (title, checked) => input._(c => c.checked = checked).at(checkers).attr({type: 'checkbox', title}),
 gsch = chkbx('do gsearch on what is other than number', 1).onchange(_=> esoich.checked = false)(), 
 rtb = chkbx('reversed ordingal gematria search')(), esoich = chkbx('esearch').onclick(_=>gsch.checked=0)(), 
 alsoSaturate = chkbx('search: also saturate', 1)(), toast = msg => {
   const begone = _=> t.remove(), t = p.toast.onclick(_=>term.value = msg).ondblclick(begone).$body(msg)
   setTimeout(begone, 15000)
   return msg
-},
+}, baroeskwidjel = () => (clearTimeout(baroeskwidjel.toime), baroeskwidjel.toime = setTimeout(() => {
+  let mtchs = {}
+  document.querySelectorAll('main > article').forEach(art => {
+    let nao = gsum(art.textContent, 3)[!rtb.checked ? 1: 0]
+    if (!mtchs[nao]) mtchs[nao] = []
+    mtchs[nao].push(art)
+  })
+  for (const m in mtchs) if (m.length >= 2) mtchs[m].forEach(art => {
+      art.style.textDecoration = 'underline'
+      art.style.textDecorationColor = seedCLR(m)
+  });
+}, 1300)),
 sensitivityDial = input.sensitivity.attr({type: 'range', min: '0', max: '1', step:'0.001', value: '0.6', title: 'sensitivity dial'})(),
 term = input.term.attr({type: 'text'}).onkeydown(async e => {
   if (e.key == 'Enter') {
@@ -142,6 +155,7 @@ term = input.term.attr({type: 'text'}).onkeydown(async e => {
           mn.innerHTML = `<h3>${s}<br>${pfR(s)}</h3>`
           dispense(memory.gsearch(s, rtb.checked))
           memory.search(v, alsoSaturate.checked ? 1 : undefined).then(these => {
+            baroeskwidjel()
             for (const [id, one] of these.entries()) if (one == v) {
               setTimeout(() => !mn.innerHTML.includes(v) && articulate(id, v), 15)
               break
@@ -190,3 +204,13 @@ ogStyle = document.head.querySelector('style').innerHTML
     }`
   else document.head.querySelector('style').innerHTML = ogStyle
 })();
+function seedCLR(m) {
+  const str = String(m)
+  let hash = 0
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash)
+    hash |= 0
+  }
+  const hue = Math.abs(hash % 360)
+  return `hsl(${hue}, 70%, 45%)`
+}

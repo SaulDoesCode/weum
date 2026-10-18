@@ -118,51 +118,265 @@ section.btns {
     }, mn = main.$body(),
     mnu = div.mnu.$body(d.a.attr({href: 'memory#wm'})('memory'),
         kopl({
-            lists() { console.log('lists') },
-            write() { writr() },
-            billboardText() {
-                Style.txt`position: absolute; font-size: 20px; top: 1cm; left: 16cm;`
-                const txt = "Saul van der Walt"
-                const el = div.txt.at(mn)(txt)
-                el.$fz = 20
-                el.$hoz = 0
-                el.$going = {
-                    w() {
-                        el.style.fontSize = (el.$fz += 0.03) + 'px'
-                    },
-                    a() {
-                        el.style.transform = `translateX(${el.$hoz+=0.03}px)`
-                    },
-                    s() {
-                        el.style.fontSize = (el.$fz -= 0.03) + 'px'
-                    },
-                    d() {
-                        el.style.transform = `translateX(${el.$hoz-=0.03}px)`
+            wsqr() {
+                d.style.at(mn)(`
+                    .wh {
+                        position: absolute;
+                        width: 1cm;
+                        height: 1cm;
+                        background: #fff;
+                        box-shadow: 0 0 3px rgba(0,0,0,.5);
+                        border-radius: 4px;
                     }
-                }
-                window.onkeydown = e => {
-                    //console.log(e)
-                    const change = el.$going[e.key]
-                    if (change) {
-                        let going = true
-                        const go = () => {
-                            change()
-                            if (going) requestAnimationFrame(go)
-                        }, hit = ue => {
-                            if (e.key == ue.key) {
-                                going = false
-                                window.removeEventListener('keyup', hit)
-                            }
-                        }
-                        window.addEventListener('keyup', hit)
-                        requestAnimationFrame(go)
-                    }
-                }
+                `)
 
-                window.onmousemove = e => {
-                    //console.log(e)
+                const wh = div.wh.at(mn)()
+                let x = 50, y = 50, lrtr = 9
+                wh.style.top = x + 'px'
+                wh.style.left = y + 'px'
+
+                window.onkeydown = e => {
+                    if (e.key == 'ArrowUp') {
+                        wh.style.top = (--x * lrtr) + 'px'
+                    } else if (e.key == 'ArrowDown') {
+                        wh.style.top = (++x * lrtr) + 'px'
+                    } else if (e.key == 'ArrowLeft') {
+                        wh.style.left = (--y * lrtr) + 'px'
+                    } else if (e.key == 'ArrowRight') {
+                        wh.style.left = (++y * lrtr) + 'px'
+                    } else if (e.key == 'PageUp') {
+                        lrtr++
+                    } else if (e.key == 'PageDown') {
+                        lrtr--
+                    } else {
+                        console.log(e.key)
+                    }
                 }
             },
+            ovrlps() {
+                d.style.at(mn)(`main {
+                    align-items: center;
+                    .cils {
+                        display: flex;
+                        flex-flow: row nowrap;
+                        gap: 3mm;
+                        padding: 4mm;
+                        justify-content: center;
+                    }
+                    .cil {
+                        position: relative;
+                        display: inline-flex;
+                        flex-flow: column nowrap;
+                        span {
+                            position: relative;
+                            display: inline-block;
+                            border-radius: 100%;
+                            background: #fff;
+                            width: 5mm;
+                            height: 5mm;
+                            margin-top: -1mm;
+                            box-shadow: 0 0 3px rgba(0, 0, 0, .3);
+                        }
+                    }
+                    .tril {
+                        position: relative;
+                        display: inline-flex;
+                        flex-flow: row wrap;
+                        max-height: 11mm;
+                        max-width: 10mm;
+                        span:first-of-type {
+                            margin: 0 calc(50% - 2.5mm) -1mm calc(50% - 2.5mm);
+                        }
+                        span:nth-of-type(2) {
+                            margin-top: -3.5mm;
+                            margin-right: -.75mm;
+                        }
+                        span:nth-of-type(3) {
+                            margin-top: -3.5mm;
+                            margin-left: -.75mm;
+                        }
+                        span {
+                            position: relative;
+                            display: inline-block;
+                            border-radius: 100%;
+                            background: #fff;
+                            width: 5mm;
+                            height: 5mm;
+                            box-shadow: 0 0 3px rgba(0, 0, 0, .3);
+                        }
+                    }
+                }`)
+
+                const hst = section.cils.at(mn)()
+
+                const cil = (a = {}, ...args) => (b = {}, ...args1) => (c = {}, ...args2) => div.cil.at(hst)(
+                    span.a.css(a)(...args),  span.b.css(b)(...args1),  span.c.css(c)(...args2)
+                )
+
+                cil()()()
+                cil({zIndex: 2})({})({zIndex: 0})
+                cil()({zIndex: 1})()
+                cil({zIndex: 2})({zIndex: 1})()
+
+                const tril = (a = {zIndex: 0}, ...args) => (b = {zIndex: 0}, ...args1) => (c = {zIndex: 0}, ...args2) => div.tril.at(hst)(
+                    span.a.css(a)(...args), span.b.css(b)(...args1), span.c.css(c)(...args2)
+                )
+
+                hst.append(d.br())
+                tril()()()
+                tril()({zIndex: 1})()
+                tril({zIndex: 1})({zIndex: 2})()
+                tril({zIndex: 2})({zIndex: 1})()
+                tril({zIndex: 2})()({zIndex: 1})
+                tril({zIndex: 1})()({zIndex: 2})
+            },
+            cil() {
+                d.style.at(mn)(`main {
+                    align-items: center;
+                    .cils {
+                        display: flex;
+                        flex-wrap: wrap;
+                        gap: 3mm;
+                        padding: 5mm;
+                        justify-content: center;
+                    }
+                    .cil {
+                        display: inline-flex;
+                        flex-flow: column nowrap;
+                        span {
+                            border-radius: 100%;
+                            width: 5mm;
+                            height: 5mm;
+                            margin-top: -1mm;
+                            box-shadow: 0 0 3px rgba(0, 0, 0, .3);
+                        }
+                    }
+                }`)
+
+                const hst = section.cils.at(mn)()
+
+                const cil = (a, b, c) => div.cil.at(hst)(
+                    span.a.css(a)(), 
+                    span.b.css(b)(), 
+                    span.c.css(c)()
+                )
+                const palette = ['#ef476f', '#ffd166', '#118ab2']
+
+
+                const permute = arr => 
+                    arr.length <= 1 
+                        ? [arr] 
+                        : arr.flatMap((v, i) => permute([...arr.slice(0, i), ...arr.slice(i + 1)]).map(p => [v, ...p]))
+
+                const renderAllOptions = () => {
+                    const zPerms = permute([1, 2, 3])
+                    const trits = [0, 1, 2]
+
+                    zPerms.forEach(z => {
+                        trits.forEach(t0 => {
+                            trits.forEach(t1 => {
+                                trits.forEach(t2 => {
+                                    if ((z[2] == 2) && ((z[0] == 3 && z[1] == 1) || (z[0] == 1 && z[1] == 3))) return;
+                                    cil(
+                                        { zIndex: z[0], background: palette[t0] },
+                                        { zIndex: z[1], background: palette[t1] },
+                                        { zIndex: z[2], background: palette[t2] }
+                                    )
+                                })
+                            })
+                        })
+                    })
+                }
+
+                renderAllOptions()
+            },
+            criles() {
+                d.style.at(mn)(`main {align-items: center;} .aaf {
+                    text-align: left;
+                    .nums { font-family: monospace; }
+                    .dot {
+                        display: inline-block;
+                        background: #fff;
+                    }
+                    .on { background: #000; }
+                    span {
+                        margin-left: 1mm;
+                        width: 2.5mm; 
+                        height: 2.5mm;
+                    }
+                }`)
+
+                const sxtn = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],  tgl = n => span.dot.onclick((e, spn) => {spn.classList.toggle('on')})(),
+                aaf = article.aaf.at(mn)(
+                    div.nums(span('#'), ...sxtn.map(n => span(''+n))),
+                    ...'abcdefghijklmnopqrstuvwxyz'.split('').map(a => div(span(a), ...sxtn.map(tgl)))
+                )
+            },
+            biles() {
+                d.style.at(mn)(`
+                main {
+                    align-items: center;
+                }
+                .clr {
+                    display: inline-block;
+                    width: 1cm;
+                    height: 1cm;
+                    border-radius: 100%;
+                }
+                .rn {
+                    font-size: .4em;
+                    font-family: sans-serif;
+                }
+                .tiles, .bhang {
+                    display: flex;
+                    flex-flow: row wrap;
+                    justify-content: center;
+                    align-content: center;
+                    align-items: flex-start;
+                    width: 2.25cm;
+                    margin-bottom: .25em;
+                    span {
+                        display: inline-block;
+                        width: .25cm;
+                        height: .25cm;
+                        background: #fff;
+                        margin: 0;
+                        padding: 0;
+                    }
+                    .on { background: #000; }
+                }`)
+                let v = 4
+                while (--v != -1) {
+                    const mp = new Map(), bn = (out = []) => (mp.forEach(v => out.push(v)), out.join('')),
+                    rn = d.p.rn(), rn2 = d.p.rn(), rn3 = d.p.rn(), rn4 = d.p.rn(), clr = div.clr(), clr2 = div.clr(), 
+                    clr3 = div.clr(), clr4 = div.clr(), bncl = d.p(), bncl2 = d.p(), bncl3 = d.p(), bncl4 = d.p(),
+                    tiles = section.tiles.onclick(e => {
+                        if (mp.has(e.target)) {
+                            e.target.classList.toggle('on')
+                            mp.set(e.target, e.target.classList.contains('on') ? 1 : 0)
+                            let b = bn()
+                            clr.style.background = bn2rgb(rn.textContent = b)
+                            bncl.textContent = bincil(b, 1).join(', ')
+                            clr3.style.background = bn2rgb(rn3.textContent = invertbn(b))
+                            bncl3.textContent = bincil(rn3.textContent, 1).join(', ')
+                            clr4.style.background = bn2rgb(rn4.textContent =  [...rn3.textContent].reverse().join(''))
+                            bncl4.textContent = bincil(rn4.textContent, 1).join(', ')
+                            clr2.style.background = bn2rgb(b = [...rn.textContent].reverse().join(''))
+                            bncl2.textContent = bincil(b, 1).join(', ')
+                            rn2.textContent = b
+                        }
+                    })()
+                    let n = 24
+                    while (n != 0) {
+                        const spn = span()
+                        mp.set(spn, 0)
+                        tiles.append(spn)
+                        n--
+                    }
+                    article.bhang.at(mn)(rn, rn2, rn3, rn4, tiles, clr, clr2, clr3, clr4, bncl, bncl2, bncl3, bncl4)
+                }
+            },
+            write() { writr() },
             nbn() {
                 function populateSums() {
                     {
@@ -367,4 +581,33 @@ section.btns {
         btns[2].remove()
         return { capture, one, get lines() { return lines }, set at(n) { at = n } }
     };(window.onhashchange=_=>{try{routes[location.hash.slice(1)]()}catch(e){}})()
+
+    function bn2rgb(bitString) {
+        if (!/^[01]{24}$/.test(bitString)) throw new Error("Input must be a string of exactly 24 bits (0s and 1s).")
+        const r = parseInt(bitString.slice(0, 8), 2)
+        const g = parseInt(bitString.slice(8, 16), 2)
+        const b = parseInt(bitString.slice(16, 24), 2)
+        return `rgb(${r}, ${g}, ${b})`
+    }
+    function bin2num(binaryStr) { return parseInt(binaryStr, 2) }
+    function bincil(seq, cycle = bin2num(seq)) {
+        const bn = bin2num(seq), len = (seq = seq.split('')).length
+        let i = 0, acc = 0, base = 1
+        while (i < len * cycle) {
+            seq[i % len] == 0 ? acc += base : base++
+            i++
+        }
+        return [acc, base, bn]
+    }
+    function invertbn(seq) {
+        let out = ''
+        seq.split('').forEach(b => out += b == '0' ? '1' : '0')
+        return out
+    }
+    function cilfr(seq) {
+        const [acc, base] = bincil(seq, 1)
+        const [acc1, base1] = bincil(invertbn(seq), 1)
+        return [[acc+acc1, acc-acc1, acc*acc1, acc, acc1], [base+base1, base-base1, base, base1]]
+    }
+
 </script><script src="js/sign.js"></script></body></html>

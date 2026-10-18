@@ -3,15 +3,9 @@
 #![feature(string_into_chars)]
 
 use anyhow::anyhow;// use moka::future::Cache;
-use notify_debouncer_full::{
-    DebounceEventResult,
-    DebouncedEvent,
-    Debouncer,
-    NoCache,
-    new_debouncer, //notify::*,
-};
+use notify_debouncer_full::{DebounceEventResult, DebouncedEvent, Debouncer, NoCache, new_debouncer};
 use rand::{Rng, RngExt, distr::Alphanumeric};
-use redb::{Database, MultimapTableDefinition, ReadableDatabase, ReadableMultimapTable, ReadableTable, ReadableTableMetadata, TableDefinition};
+use redb::{Database, MultimapTableDefinition, MultimapValue, ReadableDatabase, ReadableMultimapTable, ReadableTable, ReadableTableMetadata, TableDefinition};
 use rust_decimal::prelude::*;
 use salvo::{
     conn::rustls::{Keycert, RustlsConfig},
@@ -22,7 +16,9 @@ use salvo::{
 };
 use serde::{Deserialize, Serialize};
 use std::{
-    collections::HashMap, env, fs::{self}, io::Read, path::{Path}, process::{Command}, simd::{cmp::SimdPartialEq, prelude::*}, sync::{LazyLock, OnceLock, atomic::AtomicU8, mpsc}, time::{Duration, SystemTime, UNIX_EPOCH}
+    collections::HashMap, env, fs::{self}, io::Read, path::{Path}, 
+    process::{Command}, simd::{cmp::SimdPartialEq, prelude::*},
+    sync::{LazyLock, OnceLock, atomic::AtomicU8, mpsc}, time::{Duration, SystemTime, UNIX_EPOCH}
 };
 use tokio::sync::broadcast;
 use sthash::*;
@@ -292,6 +288,7 @@ async fn signup(req: &mut Request, res: &mut Response) -> anyhow::Result<()> {
     Ok(())
 }
 
+/*
 #[handler]
 async fn signout(req: &mut Request, res: &mut Response) -> anyhow::Result<()> {
     let (id, sid_hashed) = auth_check_with_sid_hashed(req, res)?;
@@ -312,7 +309,7 @@ async fn signout(req: &mut Request, res: &mut Response) -> anyhow::Result<()> {
         .insert("Content-Type", "text/plain".parse().unwrap());
     res.body("signed out");
     Ok(())
-}
+}*/
 
 fn auth_check(req: &mut Request, res: &mut Response) -> anyhow::Result<u64> {
     if let Some(c) = req.cookie("auth") {
@@ -399,7 +396,7 @@ async fn unregister(req: &mut Request, res: &mut Response) -> anyhow::Result<()>
     Ok(())
 }
 
-fn rm_account(id: u64) -> anyhow::Result<()> {
+/*fn rm_account(id: u64) -> anyhow::Result<()> {
     let wtx = DB.begin_write()?;
     {
         let mut accs = wtx.open_table(ACCOUNTS)?;
@@ -419,7 +416,7 @@ fn rm_account(id: u64) -> anyhow::Result<()> {
     }
     wtx.commit()?;
     Ok(())
-}
+}*/
 
 const SESSIONS: TableDefinition<
     &[u8],      // session hash
@@ -548,6 +545,7 @@ async fn tag_order(req: &mut Request, res: &mut Response) -> anyhow::Result<()> 
     ))
 }
 
+/*
 fn remove_order(
     id: &str,
 ) -> anyhow::Result<(
@@ -579,7 +577,7 @@ fn remove_order(
             "unable to remove order, it did not exist in the db"
         )),
     }
-}
+}*/
 
 #[handler]
 async fn order_remove(req: &mut Request, res: &mut Response) -> anyhow::Result<()> {
@@ -933,9 +931,7 @@ fn remove_product(name: &str) -> anyhow::Result<()> {
         if let Some(ag) = wx.open_table(PRODUCTS)?.remove(name)? {
             let p = ag.value();
             let mut tl = wx.open_multimap_table(TAG_LOOKUP)?;
-            for tag in &p.5 {
-                tl.remove(tag.as_str(), name)?;
-            }
+            for tag in &p.5 { tl.remove(tag.as_str(), name)?; }
             wx.open_multimap_table(PRICE_LOOKUP)?
                 .remove(p.3.as_str(), name)?;
         }
@@ -1215,9 +1211,13 @@ async fn main() {
             Router::with_path("memory").get(memory_page)
             .push(Router::with_path("{op}").goal(memory_api))
         )
+        .push(Router::with_path("kuis").get(kop_huis))
         .push(Router::with_path("moot").post(mootroute))
         .push(
-            Router::with_path("{*path}").get(
+            Router::with_path("{*path}")
+            .push(Router::with_path("textuality/{name}").post(save_textuality))
+            .push(Router::with_path("textualities").get(list_textualities))
+            .get(
                 StaticDir::new(["assets"])
                     .include_dot_files(false)
                     .defaults("index.html"),
@@ -1490,226 +1490,105 @@ async fn memory_page(_req: &mut Request, _res: &mut Response) -> salvo::Result<N
     NamedFile::open("./assets/memory.html").await
 }
 
-/*
-unsafe fn sum_avx2(data: &[u8]) -> u64 { unsafe {
-    let mut ptr = data.as_ptr();
-    let end   = ptr.add(data.len());
-    let zero  = _mm256_setzero_si256(); // 8 independent u64-accumulating registers — hides multiply-add latency.
-    let mut s0 = _mm256_setzero_si256();
-    let mut s1 = _mm256_setzero_si256();
-    let mut s2 = _mm256_setzero_si256();
-    let mut s3 = _mm256_setzero_si256();
-    let mut s4 = _mm256_setzero_si256();
-    let mut s5 = _mm256_setzero_si256();
-    let mut s6 = _mm256_setzero_si256();
-    let mut s7 = _mm256_setzero_si256(); // Main loop: 8 × 32 = 256 bytes / iteration.
-    let main_end = ptr.add(data.len() & !(256 - 1));
-    while ptr < main_end {
-        s0 = _mm256_add_epi64(s0, _mm256_sad_epu8(_mm256_loadu_si256(ptr           as *const __m256i), zero));
-        s1 = _mm256_add_epi64(s1, _mm256_sad_epu8(_mm256_loadu_si256(ptr.add( 32) as *const __m256i), zero));
-        s2 = _mm256_add_epi64(s2, _mm256_sad_epu8(_mm256_loadu_si256(ptr.add( 64) as *const __m256i), zero));
-        s3 = _mm256_add_epi64(s3, _mm256_sad_epu8(_mm256_loadu_si256(ptr.add( 96) as *const __m256i), zero));
-        s4 = _mm256_add_epi64(s4, _mm256_sad_epu8(_mm256_loadu_si256(ptr.add(128) as *const __m256i), zero));
-        s5 = _mm256_add_epi64(s5, _mm256_sad_epu8(_mm256_loadu_si256(ptr.add(160) as *const __m256i), zero));
-        s6 = _mm256_add_epi64(s6, _mm256_sad_epu8(_mm256_loadu_si256(ptr.add(192) as *const __m256i), zero));
-        s7 = _mm256_add_epi64(s7, _mm256_sad_epu8(_mm256_loadu_si256(ptr.add(224) as *const __m256i), zero));
-        ptr = ptr.add(256);
-    } // Mop up remaining 32-byte blocks.
-    while ptr.add(32) <= end { 
-        s0 = _mm256_add_epi64(s0, _mm256_sad_epu8(_mm256_loadu_si256(ptr as *const __m256i), zero));
-        ptr = ptr.add(32);
-    } // Tree-reduce 8 → 1 register (minimises latency on out-of-order CPUs).
-    let t01   = _mm256_add_epi64(s0, s1);
-    let t23   = _mm256_add_epi64(s2, s3);
-    let t45   = _mm256_add_epi64(s4, s5);
-    let t67   = _mm256_add_epi64(s6, s7);
-    let t0123 = _mm256_add_epi64(t01, t23);
-    let t4567 = _mm256_add_epi64(t45, t67);
-    let total = _mm256_add_epi64(t0123, t4567);
-    let lo     = _mm256_castsi256_si128(total); // Horizontal reduction: 4 u64 lanes → 1 u64.
-    let hi     = _mm256_extracti128_si256(total, 1);
-    let sum128 = _mm_add_epi64(lo, hi);
-    let mut result = (_mm_cvtsi128_si64(sum128) as u64)
-        .wrapping_add(_mm_extract_epi64(sum128, 1) as u64); // Scalar tail: at most 31 bytes.
-    while ptr < end { result += *ptr as u64; ptr = ptr.add(1); }
-    result
-} }
+#[handler]
+async fn kop_huis(_req: &mut Request, _res: &mut Response) -> salvo::Result<NamedFile> {
+    NamedFile::open("./assets/kuis.html").await
+}
 
-pub fn parallel_sum(data: &[u8]) -> u64 {
-    const CHUNK: usize = 64 * 1024 * 1024;
-    data.par_chunks(CHUNK).map(|chunk| {
-        return unsafe { sum_avx2(chunk) };
-    }).sum()
-}*/
-
-/*
-#[target_feature(enable = "avx2")] /// AVX2 fast path: 8× 256-bit unroll, PSADBW accumulation, no widening.
-unsafe fn gematria_sum(data: &[u8]) -> u64 { unsafe {
-    let mut ptr = data.as_ptr();
-    let end     = ptr.add(data.len()); // All constants broadcast once into registers (free after the first use).
-    let lower_mask = _mm256_set1_epi8(0x20u8 as i8); // OR → lowercase
-    let sub_offset = _mm256_set1_epi8((b'a' - 1) as i8); // a→1, b→2 … z→26
-    let max_val    = _mm256_set1_epi8(26i8);          // vpminub threshold
-    let zero       = _mm256_setzero_si256();
-    // Eight independent u64-accumulating ymm registers.
-    // Independence hides the 3-cycle vpaddq latency on OOO CPUs.
-    let mut s0 = zero; let mut s1 = zero;
-    let mut s2 = zero; let mut s3 = zero;
-    let mut s4 = zero; let mut s5 = zero;
-    let mut s6 = zero; let mut s7 = zero; 
-    /// Per-block kernel: load 32 bytes, map to gematria values, PSADBW-sum.
-    macro_rules! process {
-        ($acc:expr, $p:expr) => {{
-            let v       = _mm256_loadu_si256($p as *const __m256i); // Step a: lowercase
-            let lc      = _mm256_or_si256(v, lower_mask); // Step b: shift so 'a'→1 … 'z'→26; non-letters wrap above 26
-            let sub     = _mm256_sub_epi8(lc, sub_offset); // Step c+d: zero out non-letters via vpminub mask
-            let clamped = _mm256_min_epu8(sub, max_val); // vpminub(sub, 26) == sub  iff sub ≤ 26  (letter)
-            let mask    = _mm256_cmpeq_epi8(sub, clamped); // vpcmpeqb gives 0xFF where equal, 0x00 elsewhere
-            let gval    = _mm256_and_si256(sub, mask); // AND zeros the non-letter bytes
-            $acc = _mm256_add_epi64($acc, _mm256_sad_epu8(gval, zero)); // Step e: PSADBW — sums 8 consecutive u8 → u64, 4 groups per ymm
-        }};
-    } // Main loop: 8 × 32 = 256 bytes per iteration.
-    let main_end = ptr.add(data.len() & !(256 - 1));
-    while ptr < main_end {
-        process!(s0, ptr);           process!(s1, ptr.add( 32));
-        process!(s2, ptr.add( 64));  process!(s3, ptr.add( 96));
-        process!(s4, ptr.add(128));  process!(s5, ptr.add(160));
-        process!(s6, ptr.add(192));  process!(s7, ptr.add(224));
-        ptr = ptr.add(256);
-    } // Mop up any remaining 32-byte blocks.
-    while ptr.add(32) <= end {
-        process!(s0, ptr);
-        ptr = ptr.add(32);
-    } // Tree-reduce 8 → 1 register (minimises dependency chain length).
-    let t01   = _mm256_add_epi64(s0, s1);
-    let t23   = _mm256_add_epi64(s2, s3);
-    let t45   = _mm256_add_epi64(s4, s5);
-    let t67   = _mm256_add_epi64(s6, s7);
-    let t0123 = _mm256_add_epi64(t01, t23);
-    let t4567 = _mm256_add_epi64(t45, t67);
-    let total = _mm256_add_epi64(t0123, t4567); // Horizontal reduction of the 4 u64 lanes in the 256-bit register.
-    let lo     = _mm256_castsi256_si128(total);
-    let hi     = _mm256_extracti128_si256(total, 1);
-    let sum128 = _mm_add_epi64(lo, hi);
-    let mut result = (_mm_cvtsi128_si64(sum128) as u64)
-        .wrapping_add(_mm_extract_epi64(sum128, 1) as u64);
-    while ptr < end { // Scalar tail: at most 31 bytes — negligible cost.
-        let b = (*ptr) | 0x20;
-        if b >= b'a' && b <= b'z' {
-            result += (b - b'a' + 1) as u64;
-        }
-        ptr = ptr.add(1);
-    }
-    result
-}}
-*/
+#[cfg(target_arch = "x86_64")]
 #[target_feature(enable = "avx2")]
-/// AVX2 fast path: 8× 256-bit unroll, PSADBW accumulation, no widening.
-/// Returns `(standard, reversed)` where:
-///   standard: a=1  .. z=26
-///   reversed: a=26 .. z=1  (i.e. 27 − standard_value for each letter)
-unsafe fn gematria_dual_sum(data: &[u8]) -> (u64, u64) { unsafe {
-    let mut ptr = data.as_ptr();
-    let end     = ptr.add(data.len());
- 
-    // ── Constants ────────────────────────────────────────────────────────────
-    let lower_mask  = _mm256_set1_epi8(0x20u8 as i8);      // OR  → lowercase
-    let sub_offset  = _mm256_set1_epi8((b'a' - 1) as i8);  // a→1 … z→26
-    let max_val     = _mm256_set1_epi8(26i8);               // vpminub threshold
-    let zero        = _mm256_setzero_si256();
-    // For reversed gematria: reversed_value = 27 - standard_value  (for letters only).
-    // We compute `27 - gval` for every byte, then AND with the same letter mask,
-    // giving 0 for non-letters and (27 - v) for letters — exactly what PSADBW needs.
-    let twentyseven = _mm256_set1_epi8(27i8);
- 
-    // ── 8 independent accumulators per sum (hides vpaddq latency) ────────────
-    let mut s0 = zero; let mut s1 = zero;
-    let mut s2 = zero; let mut s3 = zero;
-    let mut s4 = zero; let mut s5 = zero;
-    let mut s6 = zero; let mut s7 = zero;
- 
-    let mut r0 = zero; let mut r1 = zero;
-    let mut r2 = zero; let mut r3 = zero;
-    let mut r4 = zero; let mut r5 = zero;
-    let mut r6 = zero; let mut r7 = zero;
- 
-    // ── Per-block kernel ──────────────────────────────────────────────────────
-    // Loads 32 bytes, derives both gematria mappings, and PSADBW-accumulates.
-    // Standard path  (unchanged):
-    //   gval = (byte | 0x20) - ('a'-1),  clamped to ≤26, zeroed if non-letter
-    // Reversed path (new, free extra register pressure):
-    //   rval = 27 - gval,  then AND with the same letter mask
-    //   Non-letters have gval=0, so `27-0 = 27` — but the AND with `mask`
-    //   (which is 0x00 for non-letters) zeros them out safely.
-    macro_rules! process {
-        ($sacc:expr, $racc:expr, $p:expr) => {{
-            let v       = _mm256_loadu_si256($p as *const __m256i);
-            // Step a: force lowercase
-            let lc      = _mm256_or_si256(v, lower_mask);
-            // Step b: shift so 'a'→1 … 'z'→26; non-letters wrap above 26
-            let sub     = _mm256_sub_epi8(lc, sub_offset);
-            // Step c: clamp to [0, 26]; letters are unchanged, non-letters → 26
-            let clamped = _mm256_min_epu8(sub, max_val);
-            // Step d: mask — 0xFF where byte was a letter, 0x00 elsewhere
-            let mask    = _mm256_cmpeq_epi8(sub, clamped);
-            // Standard gematria values (non-letters zeroed)
-            let gval    = _mm256_and_si256(sub, mask);
-            // Reversed gematria values: 27 - gval, non-letters zeroed via mask
-            let rval    = _mm256_and_si256(_mm256_sub_epi8(twentyseven, gval), mask);
-            // Step e: PSADBW — sums 8 consecutive u8 → u64, 4 groups per ymm
-            $sacc = _mm256_add_epi64($sacc, _mm256_sad_epu8(gval, zero));
-            $racc = _mm256_add_epi64($racc, _mm256_sad_epu8(rval, zero));
-        }};
-    }
-    // ── Main loop: 8 × 32 = 256 bytes per iteration ──────────────────────────
-    let main_end = ptr.add(data.len() & !(256 - 1));
-    while ptr < main_end {
-        process!(s0, r0, ptr);           process!(s1, r1, ptr.add( 32));
-        process!(s2, r2, ptr.add( 64));  process!(s3, r3, ptr.add( 96));
-        process!(s4, r4, ptr.add(128));  process!(s5, r5, ptr.add(160));
-        process!(s6, r6, ptr.add(192));  process!(s7, r7, ptr.add(224));
-        ptr = ptr.add(256);
-    }
-    // ── Mop up remaining 32-byte blocks ──────────────────────────────────────
-    while ptr.add(32) <= end {
-        process!(s0, r0, ptr);
-        ptr = ptr.add(32);
-    }
-    // ── Tree-reduce 8 → 1 register ───────────────────────────────────────────
-    macro_rules! hreduce {
-        ($a0:expr,$a1:expr,$a2:expr,$a3:expr,
-         $a4:expr,$a5:expr,$a6:expr,$a7:expr) => {{
-            let t01   = _mm256_add_epi64($a0, $a1);
-            let t23   = _mm256_add_epi64($a2, $a3);
-            let t45   = _mm256_add_epi64($a4, $a5);
-            let t67   = _mm256_add_epi64($a6, $a7);
-            let t0123 = _mm256_add_epi64(t01, t23);
-            let t4567 = _mm256_add_epi64(t45, t67);
-            let total = _mm256_add_epi64(t0123, t4567);
-            let lo     = _mm256_castsi256_si128(total);
-            let hi     = _mm256_extracti128_si256(total, 1);
-            let s128   = _mm_add_epi64(lo, hi);
-            (_mm_cvtsi128_si64(s128) as u64)
-                .wrapping_add(_mm_extract_epi64(s128, 1) as u64)
-        }};
-    }
- 
-    let mut std_result = hreduce!(s0, s1, s2, s3, s4, s5, s6, s7);
-    let mut rev_result = hreduce!(r0, r1, r2, r3, r4, r5, r6, r7);
- 
-    // ── Scalar tail: at most 31 bytes ─────────────────────────────────────────
-    while ptr < end {
-        let b = (*ptr) | 0x20;
-        if b >= b'a' && b <= b'z' {
-            let v = (b - b'a' + 1) as u64;
-            std_result += v;
-            rev_result += 27 - v;
+unsafe fn gematria_dual_sum(data: &[u8]) -> (u64, u64) {
+    unsafe {
+        let len  = data.len();
+        let base = data.as_ptr();
+        let mut i = 0usize;
+
+        // ── Constants ────────────────────────────────────────────────────────
+        let lower_mask  = _mm256_set1_epi8(0x20u8 as i8);     // OR  → fold case
+        let sub_offset  = _mm256_set1_epi8((b'a' - 1) as i8); // 96: a→1 … z→26
+        let max_val     = _mm256_set1_epi8(26);               // upper clamp
+        let twentyseven = _mm256_set1_epi8(27);               // rev = 27 − std
+        let zero        = _mm256_setzero_si256();
+
+        // 4 chains × 2 outputs = 8 accumulators. Leaves ~8 YMMs for the working
+        // set, so nothing spills on x86_64's 16-register file.
+        let mut s0 = zero; let mut s1 = zero; let mut s2 = zero; let mut s3 = zero;
+        let mut r0 = zero; let mut r1 = zero; let mut r2 = zero; let mut r3 = zero;
+
+        // ── Per-32-byte kernel ───────────────────────────────────────────────
+        macro_rules! block {
+            ($sa:ident, $ra:ident, $off:expr) => {{
+                let v       = _mm256_loadu_si256(base.add($off) as *const __m256i);
+                let lc      = _mm256_or_si256(v, lower_mask);      // fold case
+                let sub     = _mm256_sub_epi8(lc, sub_offset);     // 'a'→1 … 'z'→26
+                let clamped = _mm256_min_epu8(sub, max_val);       // letters untouched
+                // mask = (sub <= 26) AND (sub >= 1).
+                //   - cmpeq(sub, min(sub, 26)) is true for sub ∈ [0, 26]
+                //   - cmpgt(sub, 0) removes sub == 0, which is where '@' (0x40)
+                //     and '`' (0x60) alias after `| 0x20` — the original bug.
+                let in_rng  = _mm256_cmpeq_epi8(sub, clamped);
+                let nonzero = _mm256_cmpgt_epi8(sub, zero);
+                let mask    = _mm256_and_si256(in_rng, nonzero);
+
+                let gval = _mm256_and_si256(sub, mask);            // 0 for non-letters
+                let rval = _mm256_and_si256(
+                    _mm256_sub_epi8(twentyseven, gval),
+                    mask,
+                );
+
+                $sa = _mm256_add_epi64($sa, _mm256_sad_epu8(gval, zero));
+                $ra = _mm256_add_epi64($ra, _mm256_sad_epu8(rval, zero));
+            }};
         }
-        ptr = ptr.add(1);
+
+        // ── 4× unrolled main loop (128 B / iter) ─────────────────────────────
+        while len - i >= 128 {
+            block!(s0, r0, i);
+            block!(s1, r1, i +  32);
+            block!(s2, r2, i +  64);
+            block!(s3, r3, i +  96);
+            i += 128;
+        }
+        // ── Remaining whole 32-byte blocks ───────────────────────────────────
+        while len - i >= 32 {
+            block!(s0, r0, i);
+            i += 32;
+        }
+
+        // ── Tree-reduce 4 YMMs → one u64 ─────────────────────────────────────
+        macro_rules! hsum4 {
+            ($a:expr, $b:expr, $c:expr, $d:expr) => {{
+                let t0 = _mm256_add_epi64($a, $b);
+                let t1 = _mm256_add_epi64($c, $d);
+                let t  = _mm256_add_epi64(t0, t1);
+                let lo = _mm256_castsi256_si128(t);
+                let hi = _mm256_extracti128_si256(t, 1);
+                let s  = _mm_add_epi64(lo, hi);
+                (_mm_cvtsi128_si64(s) as u64)
+                    .wrapping_add(_mm_extract_epi64(s, 1) as u64)
+            }};
+        }
+        let mut std_sum = hsum4!(s0, s1, s2, s3);
+        let mut rev_sum = hsum4!(r0, r1, r2, r3);
+
+        // ── Scalar tail (< 32 bytes) ─────────────────────────────────────────
+        while i < len {
+            let b = *base.add(i);
+            i += 1;
+            let v = if b.is_ascii_uppercase() {
+                (b - b'A' + 1) as u64
+            } else if b.is_ascii_lowercase() {
+                (b - b'a' + 1) as u64
+            } else {
+                continue;
+            };
+            std_sum += v;
+            rev_sum += 27 - v;
+        }
+
+        (std_sum, rev_sum)
     }
- 
-    (std_result, rev_result)
-}}
+}
 
 const STATE: TableDefinition<&[u8], &[u8]> = TableDefinition::new("state");
 const TO_REUSE: MultimapTableDefinition<&[u8], &[u8]> = MultimapTableDefinition::new("reusables");
@@ -1722,16 +1601,17 @@ const MEMORIES_2B: TableDefinition<u16, &[u8]> = TableDefinition::new("memories 
 const MEMORIES_3B: TableDefinition<(u8, u8, u8), &[u8]> = TableDefinition::new("memories 3B");
 const MEMORIES_4B: TableDefinition<u32, &[u8]> = TableDefinition::new("memories 4B");
 */
+// const DEDUP: TableDefinition<&[u8], &[u8]> = TableDefinition::new("dedup"); idk yet can do client side carefuleness too (still)
+// const PREFIXED: MultimapTableDefinition<&[u8], &[u8]> = MultimapTableDefinition::new("prefixed:");
+// const SUFIXED: MultimapTableDefinition<&[u8], &[u8]> = MultimapTableDefinition::new("sufixed:");
 
 const MEMORY_GEMATRIA: MultimapTableDefinition<u32, &[u8]> = MultimapTableDefinition::new("memg");
 const MEMORY_GEMATRIA_REVERSED: MultimapTableDefinition<u32, &[u8]> = MultimapTableDefinition::new("memg reversed");
-// const DEDUP: TableDefinition<&[u8], &[u8]> = TableDefinition::new("dedup"); idk yet can do client side carefuleness too (still)
 const ALLOCATED: &'static [u8] = b"allocated".as_slice();
 const LISTS: MultimapTableDefinition<&[u8], &[u8]> = MultimapTableDefinition::new("lists");
 const NOTES: MultimapTableDefinition<&[u8], &[u8]> = MultimapTableDefinition::new("notes");
 
-// const PREFIXED: MultimapTableDefinition<&[u8], &[u8]> = MultimapTableDefinition::new("prefixed:");
-// const SUFIXED: MultimapTableDefinition<&[u8], &[u8]> = MultimapTableDefinition::new("sufixed:");
+const NOTED_ON: MultimapTableDefinition<&[u8], &[u8]> = MultimapTableDefinition::new("noted on");
 
 fn add_to_list(ln: &[u8], v: &[u8])  -> anyhow::Result<()> {
     let wx = MEMORY.begin_write()?;
@@ -1763,7 +1643,7 @@ fn get_list(ln: &[u8])  -> anyhow::Result<HashMap<Vec<u8>, Vec<u8>>> {
     }
     Ok(hm)
 }
-
+/*
 fn rm_list(ln: &[u8])  -> anyhow::Result<Vec<Vec<u8>>> {
     let wx = MEMORY.begin_write()?;
     let mut vc = vec![];
@@ -1782,7 +1662,7 @@ fn rm_list(ln: &[u8])  -> anyhow::Result<Vec<Vec<u8>>> {
     }
     wx.commit()?;
     Ok(vc)
-}
+}*/
 
 fn rm_from_list(ln: &[u8], v: &[u8])  -> anyhow::Result<()> {
     let wx = MEMORY.begin_write()?;
@@ -1793,8 +1673,6 @@ fn rm_from_list(ln: &[u8], v: &[u8])  -> anyhow::Result<()> {
     wx.commit()?;
     Ok(())
 }
-
-const NOTED_ON: MultimapTableDefinition<&[u8], &[u8]> = MultimapTableDefinition::new("noted on");
 
 fn note_on(note: &[u8], on: &[u8]) -> anyhow::Result<()> {
     let wx = MEMORY.begin_write()?;
@@ -1831,7 +1709,7 @@ fn get_notes_on(this: &[u8]) -> anyhow::Result<HashMap<Vec<u8>, Vec<u8>>> {
     }
     Ok(found)
 }
-/*
+
 fn notes_on(hm: HashMap<&[u8], &[u8]>) -> anyhow::Result<()> {
     let wx = MEMORY.begin_write()?;
     {
@@ -1844,7 +1722,7 @@ fn notes_on(hm: HashMap<&[u8], &[u8]>) -> anyhow::Result<()> {
     }
     wx.commit()?;
     Ok(())
-}*/
+}
 
 fn rm_note(note: &[u8], on: &[u8]) -> anyhow::Result<()> {
     let wx = MEMORY.begin_write()?;
@@ -1858,7 +1736,8 @@ fn rm_note(note: &[u8], on: &[u8]) -> anyhow::Result<()> {
     Ok(())
 }
 
-/*fn rm_notes(on: &[u8]) -> anyhow::Result<()> {
+/*
+fn rm_notes(on: &[u8]) -> anyhow::Result<()> {
     let wx = MEMORY.begin_write()?;
     {
         let mut notes = wx.open_multimap_table(NOTES)?;
@@ -2041,6 +1920,32 @@ fn remember(this: &[u8]) -> anyhow::Result<Vec<u8>> {
         Err(anyhow!("didn't find that"))
     }
 }
+
+fn backup_memories_to_file_alt() -> anyhow::Result<u64> {
+    let rx = MEMORY.begin_read()?;
+    let mem = rx.open_table(MEMORIES)?;
+    let mut it_all: Vec<String> = Vec::with_capacity(mem.len()? as usize);
+    let mut binary_otherwize: Vec<Vec<u8>> = vec![];
+    let mut iter = mem.iter()?;
+    while let Some(r) = iter.next() {
+        match r {
+            Ok((_k_ag, v_ag)) => {
+                let v = v_ag.value();
+                if let Ok(stwing) = str::from_utf8(v) {
+                    //let id = k_ag.value();
+                    it_all.push(stwing.to_string());
+                } else {
+                    binary_otherwize.push(v.to_vec());
+                }
+            }, 
+            Err(e) => {
+                println!("daar is 'n gepoest, {}", e);
+            }
+        }
+    }
+    std::fs::write("./it-all.json", serde_json::to_string(&it_all)?)?;
+    Ok(mem.len()?)
+} 
 
 fn backup_memories_to_file() -> anyhow::Result<u64> {
     let rx = MEMORY.begin_read()?;
@@ -2230,24 +2135,6 @@ fn serialize_list_of_lists(data: &Vec<Vec<u8>>) -> Vec<u8> {
     buffer
 }
 
-/*fn deserialize_list_of_lists(bytes: &[u8]) -> anyhow::Result<Vec<Vec<u8>>> {
-    let bl = bytes.len();
-    let mut cursor = 0;
-    let mut result = Vec::new();
-    if bl < 4 { return Ok(result); }
-    let count = u32::from_be_bytes(bytes[0..4].try_into()?);
-    cursor += 4;
-    for _ in 0..count {
-        if cursor + 4 > bl { break; }
-        let len = u32::from_be_bytes(bytes[cursor..cursor+4].try_into()?) as usize;
-        cursor += 4;
-        if cursor + len > bl { break; }
-        result.push(bytes[cursor..cursor+len].to_vec());
-        cursor += len;
-    }
-    Ok(result)
-}*/
-
 #[inline]
 fn handle_fore_byted_bytes_pair(bytes: &mut Vec<u8>) -> anyhow::Result<(&[u8], &[u8])> {
     if bytes.len() >= 3 {
@@ -2392,7 +2279,11 @@ async fn memory_api(req: &mut Request, res: &mut Response) -> anyhow::Result<()>
         let count = MEMORY.begin_read()?.open_table(MEMORIES)?.len()?;
         res.render(Text::Plain(count.to_string()));
     } else if status == 13 {
-        let count = backup_memories_to_file()?;
+        let count = if req.uri().query().is_some_and(|q| q == "a") {
+            backup_memories_to_file_alt()?
+        } else {
+            backup_memories_to_file()? 
+        };
         res.status_code(StatusCode::ACCEPTED);
         res.render(Text::Plain(format!("it was writt'n ({})", count)));
         return Ok(());
@@ -2612,3 +2503,1093 @@ async fn mootroute(req: &mut Request, res: &mut Response) -> anyhow::Result<()> 
     }
     Ok(())
 }
+
+fn drain(mut it: MultimapValue<'_, &'static [u8]>) -> anyhow::Result<Vec<Vec<u8>>> {
+    let mut out = vec![];
+    while let Some(r) = it.next() { out.push(r?.value().to_vec()); }
+    Ok(out)
+}
+ 
+fn rm_list(ln: &[u8]) -> anyhow::Result<Vec<Vec<u8>>> {
+    let wx = MEMORY.begin_write()?;
+    let vc = {
+        let mut lists = wx.open_multimap_table(LISTS)?;
+        drain(lists.remove_all(ln)?)?
+    };
+    wx.commit()?;
+    Ok(vc)
+}
+ 
+/*fn get_notes_on(this: &[u8]) -> anyhow::Result<std::collections::HashMap<Vec<u8>, Vec<u8>>> {
+    let rx = MEMORY.begin_read()?;
+    let notes = rx.open_multimap_table(NOTES)?;
+    let memories = rx.open_table(MEMORIES)?;
+    let mut found = std::collections::HashMap::new();
+    for k in drain(notes.get(this)?)? {
+        if let Some(ag) = memories.get(k.as_slice())? {
+            found.insert(k, ag.value().to_vec());
+        }
+    }
+    if found.is_empty() {
+        return Err(anyhow!("didn't find any notes with that"));
+    }
+    Ok(found)
+}*/
+ 
+fn rm_notes(on: &[u8]) -> anyhow::Result<()> {
+    let wx = MEMORY.begin_write()?;
+    {
+        let mut notes = wx.open_multimap_table(NOTES)?;
+        let mut noted_on = wx.open_multimap_table(NOTED_ON)?;
+        for note in drain(notes.remove_all(on)?)? {
+            noted_on.remove(note.as_slice(), on)?;
+        }
+    }
+    wx.commit()?;
+    Ok(())
+}
+
+/*
+fn forget(this: &[u8]) -> anyhow::Result<Vec<u8>> {
+    let wx = MEMORY.begin_write()?;
+    let old = wx.open_table(MEMORIES)?.remove(this)?.map(|ag| ag.value().to_vec());
+    let Some(quidity) = old else {
+        wx.abort()?;
+        return Err(anyhow!("there was nothing with that name anyways"));
+    };
+    {
+        wx.open_multimap_table(TO_REUSE)?.insert(ALLOCATED, this)?;
+        let mut notes = wx.open_multimap_table(NOTES)?;
+        let mut noted_on = wx.open_multimap_table(NOTED_ON)?;
+        for note in drain(notes.remove_all(this)?)? {
+            noted_on.remove(note.as_slice(), this)?;
+        }
+        for on in drain(noted_on.remove_all(this)?)? {
+            notes.remove(on.as_slice(), this)?;
+        }
+        let mut lists = wx.open_multimap_table(LISTS)?;
+        let mut holding: Vec<Vec<u8>> = vec![];
+        for r in lists.iter()? {
+            let (ln, vals) = r?;
+            for v in vals {
+                if v?.value() == this {
+                    holding.push(ln.value().to_vec());
+                    break;
+                }
+            }
+        }
+        for ln in holding {
+            lists.remove(ln.as_slice(), this)?;
+        }
+        let (f, r) = unsafe { gematria_dual_sum(quidity.as_slice()) };
+        wx.open_multimap_table(MEMORY_GEMATRIA)?.remove(f as u32, this)?;
+        wx.open_multimap_table(MEMORY_GEMATRIA_REVERSED)?.remove(r as u32, this)?;
+        let mut memi = wx.open_multimap_table(MEMORY_INDEX)?;
+        for tk in tokenate(quidity.as_slice()) {
+            memi.remove(tk, this)?;
+        }
+        wx.open_table(EMBEDDINGS)?.remove(this)?;
+    }
+    wx.commit()?;
+    Ok(quidity)
+}
+ */
+// Sessions: SESSIONS (hash → (account, expiry)) is the record of truth; SESSIONS_LOOKUP (account → hashes)
+// is kept in step with it. EXPIRIES_SESSIONS is no longer written or read: it was keyed by the expiry second
+// alone, was never filled by make_session_for, and its retain_in(n..) kept the expired ones and dropped the live ones.
+/*
+fn make_session_for(id: u64, exp: u64) -> anyhow::Result<String> {
+    let hashr = acc_hashr()?;
+    let wtx = DB.begin_write()?;
+    let sid = randstr(24);
+    let h = hashr.hash(sid.as_bytes());
+    let mut abort = false;
+    {
+        let mut sess = wtx.open_table(SESSIONS)?;
+        if let Some(ag) = sess.insert(h.as_slice(), &(id, exp))? {
+            abort = id != ag.value().0;
+        }
+        if !abort {
+            wtx.open_multimap_table(SESSIONS_LOOKUP)?.insert(id, h.as_slice())?;
+        }
+    }
+    if abort {
+        wtx.abort()?;
+        return Err(anyhow!("had to abort due to a rare collision, try again"));
+    }
+    wtx.commit()?;
+    Ok(sid)
+}
+ 
+fn expiry_check() -> anyhow::Result<()> {
+    let n = unix_now(0)?;
+    let wx = DB.begin_write()?;
+    {
+        let mut sess = wx.open_table(SESSIONS)?;
+        let mut sl = wx.open_multimap_table(SESSIONS_LOOKUP)?;
+        let mut expired: Vec<(Vec<u8>, u64)> = vec![];
+        for r in sess.iter()? {
+            let (k, v) = r?;
+            let (id, exp) = v.value();
+            if exp <= n {
+                expired.push((k.value().to_vec(), id));
+            }
+        }
+        for (sid, id) in expired {
+            sess.remove(sid.as_slice())?;
+            sl.remove(id, sid.as_slice())?;
+        }
+    }
+    wx.commit()?;
+    Ok(())
+}*/
+ 
+#[handler]
+async fn signout(req: &mut Request, res: &mut Response) -> anyhow::Result<()> {
+    let (id, sid_hashed) = auth_check_with_sid_hashed(req, res)?;
+    res.remove_cookie("auth");
+    let wtx = DB.begin_write()?;
+    {
+        wtx.open_table(SESSIONS)?.remove(sid_hashed.as_slice())?;
+        wtx.open_multimap_table(SESSIONS_LOOKUP)?.remove(id, sid_hashed.as_slice())?;
+    }
+    wtx.commit()?;
+    res.status_code(StatusCode::ACCEPTED);
+    res.headers_mut().insert("Content-Type", "text/plain".parse().unwrap());
+    res.body("signed out");
+    Ok(())
+}
+ 
+fn rm_account(id: u64) -> anyhow::Result<()> {
+    let wtx = DB.begin_write()?;
+    {
+        let mut accs = wtx.open_table(ACCOUNTS)?;
+        if accs.remove(id)?.is_some() {
+            let mut sess = wtx.open_table(SESSIONS)?;
+            let mut sl = wtx.open_multimap_table(SESSIONS_LOOKUP)?;
+            for sid in drain(sl.remove_all(id)?)? {
+                sess.remove(sid.as_slice())?;
+            }
+        }
+    }
+    wtx.commit()?;
+    Ok(())
+}
+ 
+fn remove_order(id: &str) -> anyhow::Result<(u64, Vec<(String, u32)>, String, String, u8, Vec<u64>, Vec<String>)> {
+    let wx = DB.begin_write()?;
+    let o_order = {
+        let mut orders = wx.open_table(ORDERS)?;
+        let o = orders.remove(id)?.map(|ag| ag.value());
+        if let Some(o) = &o {
+            wx.open_multimap_table(ACC_ORDER_LOOKUP)?.remove(o.0, id)?;
+        }
+        o
+    };
+    match o_order {
+        Some(o) => {
+            wx.commit()?;
+            Ok(o)
+        }
+        None => {
+            wx.abort()?;
+            Err(anyhow!("unable to remove order, it did not exist in the db"))
+        }
+    }
+}
+ 
+/*fn change_order_status(id: &str, status: u8) -> anyhow::Result<()> {
+    let wx = DB.begin_write()?;
+    let found = {
+        let mut orders = wx.open_table(ORDERS)?;
+        let o = orders.get(id)?.map(|ag| ag.value());
+        if let Some(mut order) = o {
+            order.4 = status;
+            orders.insert(id, &order)?;
+            true
+        } else {
+            false
+        }
+    };
+    if !found {
+        wx.abort()?;
+        return Err(anyhow!("no order with that id"));
+    }
+    wx.commit()?;
+    Ok(())
+}*/
+ 
+fn textuality_name(name: &str) -> bool {
+    !name.is_empty() && name.len() <= 96 && name.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_')
+}
+ 
+#[handler]
+async fn save_textuality(req: &mut Request, res: &mut Response) -> anyhow::Result<()> {
+    auth_check_admin(req, res)?;
+    let name = req.param::<String>("name").unwrap_or_default();
+    if !textuality_name(&name) {
+        FWD::bad_req(res, anyhow!("map name is 1 to 96 of A-Z a-z 0-9 _ -"));
+        return Ok(());
+    }
+    let body = req.payload_with_max_size(64 * 1024 * 1024).await?.to_vec();
+    if let Err(e) = serde_json::from_slice::<serde_json::Value>(&body) {
+        FWD::bad_req(res, anyhow!("not json: {}", e));
+        return Ok(());
+    }
+    tokio::fs::create_dir_all("./assets/spatiotextualities").await?;
+    tokio::fs::write(format!("./assets/spatiotextualities/{}.json", name), &body).await?;
+    res.status_code(StatusCode::ACCEPTED);
+    res.render(Text::Plain(format!("written {}", name)));
+    Ok(())
+}
+ 
+#[handler]
+async fn list_textualities(req: &mut Request, res: &mut Response) -> anyhow::Result<()> {
+    auth_check_admin(req, res)?;
+    let mut names = vec![];
+    let mut rd = match tokio::fs::read_dir("./assets/spatiotextualities").await {
+        Ok(rd) => rd,
+        Err(e) => {
+            FWD::server(res, anyhow!("{}", e));
+            return Ok(());
+        }
+    };
+    while let Some(e) = rd.next_entry().await? {
+        let p = e.path();
+        if p.extension().is_some_and(|x| x == "json") {
+            if let Some(s) = p.file_stem().and_then(|s| s.to_str()) {
+                names.push(s.to_string());
+            }
+        }
+    }
+    names.sort();
+    res.render(Text::Json(serde_json::to_string(&names)?));
+    Ok(())
+}
+
+
+/*
+//const xyzrgb: MultimapTableDefinition<(u16, u16, u16, u8, u8, u8), &[u8]> = MultimapTableDefinition::new("P");
+
+const R: MultimapTableDefinition<(u8, u16, u16), &[u8]> = MultimapTableDefinition::new("R");
+const G: MultimapTableDefinition<(u8, u16, u16), &[u8]> = MultimapTableDefinition::new("G");
+const B: MultimapTableDefinition<(u8, u16, u16), &[u8]> = MultimapTableDefinition::new("B");
+const GB: MultimapTableDefinition<(u8, u16, u16), &[u8]> = MultimapTableDefinition::new("GB");
+const RB: MultimapTableDefinition<(u8, u16, u16), &[u8]> = MultimapTableDefinition::new("RB");
+const RG: MultimapTableDefinition<(u8, u16, u16), &[u8]> = MultimapTableDefinition::new("RG");
+const RGB: MultimapTableDefinition<(u8, u16, u16), &[u8]> = MultimapTableDefinition::new("RGB");
+
+const MUTUALIZED: MultimapTableDefinition<&[u8], (u16, &[u8])> = MultimapTableDefinition::new("mutualized");
+
+fn bytelr(input: Vec<u8>) -> Vec<u8> {
+    let mut out = vec![];
+    let mut stack: Vec<Vec<u8>> = vec![];
+    let mut buf: Vec<u8> = vec![];
+    let mut n: usize = 0;
+    let mut variables: HashMap<Vec<u8>, Vec<u8>> = HashMap::new();
+    loop {
+        if let Some(b) = input.get(n) {
+            match b {
+                255 => {
+
+                }
+                254 => {
+
+                }
+                253 => {
+
+                }
+                252 => {
+
+                }
+                251 => {
+
+                }
+                250 => {
+
+                }
+                249 => {
+
+                }
+                248 => {
+
+                }
+                247 => {
+
+                }
+                246 => {
+
+                }
+                245 => {
+
+                }
+                244 => {
+
+                }
+                243 => {
+
+                }
+                242 => {
+
+                }
+                241 => {
+
+                }
+                240 => {
+
+                }
+                239 => {
+
+                }
+                238 => {
+
+                }
+                237 => {
+
+                }
+                236 => {
+
+                }
+                235 => {
+
+                }
+                234 => {
+                    
+                }
+                233 => {
+
+                }
+                232 => {
+
+                }
+                231 => {
+
+                }
+                230 => {
+
+                }
+                229 => {
+
+                }
+                228 => {
+
+                }
+                227 => {
+
+                }
+                226 => {
+
+                }
+                225 => {
+
+                }
+                224 => {
+                    
+                }
+                223 => {
+
+                }
+                222 => {
+
+                }
+                221 => {
+
+                }
+                220 => {
+
+                }
+                219 => {
+
+                }
+                218 => {
+
+                }
+                217 => {
+
+                }
+                216 => {
+
+                }
+                215 => {
+
+                }
+                214 => {
+
+                }
+                213 => {
+
+                }
+                212 => {
+
+                }
+                211 => {
+
+                }
+                210 => {
+
+                }
+                209 => {
+
+                }
+                208 => {
+
+                }
+                207 => {
+
+                }
+                206 => {
+
+                }
+                205 => {
+
+                }
+                204 => {
+
+                }
+                203 => {
+
+                }
+                202 => {
+
+                }
+                201 => {
+
+                }
+                200 => {
+
+                }
+                199=> {
+
+                }
+                198=> {
+
+                }
+                197=> {
+
+                }
+                196=> {
+
+                }
+                195 => {
+
+                }
+                194 => {
+
+                }
+                193 => {
+
+                }
+                192 => {
+
+                }
+                191=> {
+
+                }
+                190=> {
+
+                }
+                189=> {
+
+                }
+                188=> {
+
+                }
+                187=> {
+
+                }
+                186=> {
+
+                }
+                185=> {
+
+                }
+                184=> {
+
+                }
+                183=> {
+
+                }
+                182=> {
+
+                }
+                181=> {
+
+                }
+                180=> {
+
+                }
+                179=> {
+
+                }
+                178=> {
+
+                }
+                177=> {
+
+                }
+                176=> {
+
+                }
+                175=> {
+
+                }
+                174=> {
+
+                }
+                173=> {
+
+                }
+                172=> {
+
+                }
+                171=> {
+
+                }
+                170=> {
+
+                }
+
+
+                169 => {
+
+                }
+                168 => {
+
+                }
+                167 => {
+                    
+                }
+                166 => {
+                    
+                }
+                165 => {
+                    
+                }
+                164 => {
+
+                }
+                163 => {
+
+                }
+                162 => {
+
+                }
+                161 => {
+
+                }
+                160 => {
+
+                }
+                159 => {
+
+                } 
+                158 => {
+
+                }
+                157 => {
+
+                }
+                156 => {
+
+                }
+                155 => {
+
+                }
+                154 => {
+
+                }
+                153 => {
+
+                }
+                152 => {
+
+                }
+                151 => {
+
+                }
+                150 => {
+
+                }
+                149 => {
+
+                }
+                148 => {
+
+                }
+                147 => {
+
+                }
+                146 => {
+
+                }
+                145 => {
+
+                }
+                144 => {
+
+                }
+                143 => {
+
+                }
+                142 => {
+
+                }         
+                141 => {
+
+                }
+                140 => {
+
+                }
+                139 => {
+
+                }
+                138 => {
+
+                }
+                137 => {
+
+                }
+                136 => {
+
+                }
+                135 => {
+
+                }
+                134 => {
+                    
+                }
+                133 => {
+
+                }
+                132 => {
+
+                }
+                131 => {
+
+                }
+                130 => {
+
+                }
+                129 => {
+
+                }
+                128 => {
+
+                }
+                127 => {
+
+                }
+                126 => {
+
+                }
+                125 => {
+
+                }
+                124 => {
+                    
+                }
+                123 => {
+
+                }
+                122 => {
+
+                }
+                121 => {
+
+                }
+                120 => {
+
+                }
+                119 => {
+
+                }
+                118 => {
+
+                }
+                117 => {
+
+                }
+                116 => {
+
+                }
+                115 => {
+
+                }
+                114 => {
+
+                }
+                113 => {
+
+                }
+                112 => {
+
+                }
+                111 => {
+
+                }
+                110 => {
+
+                }
+                109 => {
+
+                }
+                108 => {
+
+                }
+                107 => {
+
+                }
+                106 => {
+
+                }
+                105 => {
+
+                }
+                104 => {
+
+                }
+                103 => {
+
+                }
+                102 => {
+
+                }
+                101 => {
+
+                }
+                100 => {
+
+                }
+                99=> {
+
+                }
+                98=> {
+
+                }
+                97=> {
+
+                }
+                96=> {
+
+                }
+                95 => {
+
+                }
+                94 => {
+
+                }
+                93 => {
+
+                }
+                92 => {
+
+                }
+                91=> {
+
+                }
+                90=> {
+
+                }
+                89=> {
+
+                }
+                88=> {
+
+                }
+                87=> {
+
+                }
+                86=> {
+
+                }
+                85=> {
+
+                }
+                84=> {
+
+                }
+                83=> {
+
+                }
+                82=> {
+
+                }
+                81=> {
+
+                }
+                80=> {
+
+                }
+                79=> {
+
+                }
+                78=> {
+
+                }
+                77=> {
+
+                }
+                76=> {
+
+                }
+                75=> {
+
+                }
+                74=> {
+
+                }
+                73=> {
+
+                }
+                72=> {
+
+                }
+                71=> {
+
+                }
+                70=> {
+
+                }
+                69=> {
+
+                }
+                68=> {
+
+                }
+                67=> {
+
+                }
+                66=> {
+
+                }
+                65=> {
+
+                }
+                64=> {
+
+                }
+                63=> {
+
+                }
+                62=> {
+
+                }
+                61=> {
+
+                }
+                60 => {
+
+                }
+                59 => {
+
+                } 
+                58 => {
+
+                }
+                57 => {
+
+                }
+                56 => {
+
+                }
+                55 => {
+
+                }
+                54 => {
+
+                }
+                53 => {
+
+                }
+                52 => {
+
+                }
+                51 => {
+
+                }
+                50 => {
+
+                }
+                49 => { // * flips page over, writes further * 
+                    stack.pop();
+                }
+                48 => { // type-writer-ding
+                    let fresh_what = buf.drain(..).collect::<Vec<u8>>();
+                    match fresh_what.as_slice() {
+                        &[19, 1, 21, 12] => {
+                            println!("moo {:?}", stack);
+                        }
+                        _ => {
+
+                        }
+                    }
+                    stack.push(fresh_what);
+                }
+                47 => {
+                    buf.push(b'^');
+                }
+                46 => {
+                    buf.push(b'=');
+                }
+                45 => {
+                    buf.push(b'/');
+                }
+                44 => {
+                    buf.push(b'-');
+                }
+                43 => {
+                    buf.push(b'+');
+                }
+                42 => {
+                    buf.push(b'*');
+                }         
+                41 => {
+                    buf.push(b'9');
+                }
+                40 => {
+                    buf.push(b'8');
+                }
+                39 => {
+                    buf.push(b'7');
+                }
+                38 => {
+                    buf.push(b'6');
+                }
+                37 => {
+                    buf.push(b'5');
+                }
+                36 => {
+                    buf.push(b'4');
+                }
+                35 => {
+                    buf.push(b'3');
+                }
+                34 => {
+                    buf.push(b'2');
+                }
+                33 => {
+                    buf.push(b'1');
+                }
+                32 => {
+                    buf.push(b'0');
+                }
+                31 => {
+                    buf.push(b'#');
+                }
+                30 => {
+                    buf.push(b'!');
+                }
+                29 => {
+                    buf.push(b'\n');
+                }
+                28 => {
+                    buf.push(b','); 
+                }
+                27 => {
+                    buf.push(b'.');
+                }
+                26 => {
+                    buf.push(b'z');
+                }
+                25 => {
+                    buf.push(b'y');
+                }
+                24 => {
+                    buf.push(b'x');
+                }
+                23 => {
+                    buf.push(b'w');
+                }
+                22 => {
+                    buf.push(b'v');
+                }
+                21 => {
+                    buf.push(b'u');
+                }
+                20 => {
+                    buf.push(b't');
+                }
+                19 => {
+                    buf.push(b's');
+                }
+                18 => {
+                    buf.push(b'r');
+                }
+                17 => {
+                    buf.push(b'q');
+                }
+                16 => {
+                    buf.push(b'p');
+                }
+                15 => {
+                    buf.push(b'o');
+                }
+                14 => {
+                    buf.push(b'n');
+                }
+                13 => {
+                    buf.push(b'm');
+                }
+                12 => {
+                    buf.push(b'l');
+                }
+                11 => {
+                    buf.push(b'k');
+                }
+                10 => {
+                    buf.push(b'j');
+                }
+                9 => {
+                    buf.push(b'i');
+                }
+                8 => {
+                    buf.push(b'h');
+                }
+                7 => {
+                    buf.push(b'g');
+                }
+                6 => {
+                    buf.push(b'f');
+                }
+                5 => {
+                    buf.push(b'e');
+                }
+                4 => {
+                    buf.push(b'd');
+                }
+                3 => {
+                    buf.push(b'c');
+                }
+                2 => {
+                    buf.push(b'b');
+                }
+                1 => {
+                    buf.push(b'a');
+                }
+                0 => {
+                    buf.push(b' ');
+                }
+            }
+        }
+    }
+    out
+}*/
+
+
+/*fn deserialize_list_of_lists(bytes: &[u8]) -> anyhow::Result<Vec<Vec<u8>>> {
+    let bl = bytes.len();
+    let mut cursor = 0;
+    let mut result = Vec::new();
+    if bl < 4 { return Ok(result); }
+    let count = u32::from_be_bytes(bytes[0..4].try_into()?);
+    cursor += 4;
+    for _ in 0..count {
+        if cursor + 4 > bl { break; }
+        let len = u32::from_be_bytes(bytes[cursor..cursor+4].try_into()?) as usize;
+        cursor += 4;
+        if cursor + len > bl { break; }
+        result.push(bytes[cursor..cursor+len].to_vec());
+        cursor += len;
+    }
+    Ok(result)
+}*/
